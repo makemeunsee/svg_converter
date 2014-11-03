@@ -16,9 +16,9 @@ object SvgPathConverter {
   val floatsPattern = s"(-{0,1}[0-9]+(?:\\.[0-9]*)$floatSepPattern-{0,1}[0-9]+(?:\\.[0-9]*))".r
 
   val world =
-    scala.xml.XML.loadFile( "www/BlankMap-Equirectangular.svg" )
-//  scala.xml.XML.loadFile( "D:\\dev\\svg\\BlankMap-World-alt.svg" )
-//  scala.xml.XML.loadFile( "D:\\dev\\svg\\test.svg" )
+//    scala.xml.XML.loadFile( "www/BlankMap-Equirectangular.svg" )
+//  scala.xml.XML.loadFile( "www/BlankMap-World-alt.svg" )
+  scala.xml.XML.loadFile( "www/test.svg" )
 
   def main( args: Array[String] ) {
     scala.xml.XML.save( "www/test_custom.svg", update( pathToLine )( world ) )
@@ -100,15 +100,27 @@ object SvgPathConverter {
       lines
   }
 
+  def createTag( points: Seq[RoundedPoint] ): Node = {
+    if (points.size == 1)
+      <rect x={(points(0).x - gridSize / 4).toString} y={(points(0).y - gridSize / 4).toString} width={(gridSize / 2).toString} height={(gridSize / 2).toString} style="fill:none;stroke:black;stroke-width:0.12"/>
+    else
+      <polyline points={points.map(p => s"${p.x},${p.y}").mkString(" ")} style="fill:none;stroke:black;stroke-width:0.1"/>
+  }
+
   def pathToLine: PartialFunction[Node, Node] = {
     case path @ <path></path> =>
-      val child = parsePath( ( path \ "@d" ).text ) map { points =>
-          if ( points.size == 1 )
-            <rect x={ ( points( 0 ).x-gridSize/4 ).toString} y={ ( points( 0 ).y-gridSize/4 ).toString } width={ ( gridSize/2 ).toString } height={ ( gridSize/2 ).toString } style="fill:none;stroke:black;stroke-width:0.12" />
-          else
-            <polyline points={ points.map( p => s"${p.x},${p.y}" ).mkString( " " ) } style="fill:none;stroke:black;stroke-width:0.1"/>
+      val lines = parsePath( ( path \ "@d" ).text )
+      val attributes = path.attributes.remove("d")
+      if ( lines.size == 1 ) {
+        val points = lines( 0 )
+        val r = createTag( points )
+        <g>{new Elem(r.prefix, r.label, r.attributes.append( attributes ), r.scope, true )}</g>
+      } else {
+        val child = lines map { points =>
+          createTag( points )
         }
-      new Elem( path.prefix, "g", path.attributes.remove( "d" ), path.scope, true, child : _* )
+        new Elem(path.prefix, "g", path.attributes.remove("d"), path.scope, true, child: _* )
+      }
   }
 
   def update( fct: PartialFunction[Node, Node] )( node : Node ) : Node = {
