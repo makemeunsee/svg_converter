@@ -13,14 +13,13 @@ object SvgPathConverter {
   val allowDiagonals = false
   val keepDots = true
 
-  val floatPattern = "-{0,1}[0-9]+(?:\\.*[0-9]*)"
+  val floatPattern = "-{0,1}[0-9]+(?:\\.[0-9]*)*(?:e-{0,1}[0-9]+)*"
   val floatRegExp = s"($floatPattern)".r
   val pathPartPattern = s"([AaMmLlHhVvCcSsQqTt])(?:[\\s,]*$floatPattern[\\s,]*)+".r
 
   val world =
 //    scala.xml.XML.loadFile( "www/BlankMap-Equirectangular.svg" ) // recommended settings: gridSize ~ 1, lineWidth 0.1
   scala.xml.XML.loadFile( "www/BlankMap-World-alt.svg" ) // recommended settings: gridSize ~ 5, lineWidth 0.5
-//  scala.xml.XML.loadFile( "www/test.svg" )
 
   def main( args: Array[String] ) {
     val now = System.currentTimeMillis
@@ -218,7 +217,7 @@ object SvgPathConverter {
     if ( points.size == 1 )
       <rect x={( points(0).x - gridSize / 4 ).toString} y={( points( 0 ).y - gridSize / 4 ).toString} width={( gridSize / 2 ).toString} height={( gridSize / 2 ).toString} style="fill:none;stroke:black;stroke-width:0.12"/>
     else
-      <polyline points={points.map( p => s"${p.x},${p.y}" ).mkString( " " )} style="fill:none;stroke:black;stroke-width:{lineWidth}"/>
+      <polyline points={points.map( p => s"${p.x},${p.y}" ).mkString( " " )} style={s"fill:none;stroke:black;stroke-width:${lineWidth}"}/>
   }
 
   def pathToLine: PartialFunction[Node, Node] = {
