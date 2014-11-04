@@ -32,7 +32,16 @@ import org.scalatest.Matchers
 
 class SvgPathConverterTest extends FlatSpec with Matchers {
   "The converter" should "handle all commands in a path" in {
-    val output = SvgPathConverter.update( SvgPathConverter.pathToLine )( scala.xml.XML.loadString( input ) ).toString
+    val output = SvgPathConverter( 1f, allowDiagonals = true ).update( scala.xml.XML.loadString( input ) ).toString()
     output should be ( expected )
+  }
+
+  "Linking points" should "be anisotropic" in {
+    val converter1 = SvgPathConverter( 1f, allowDiagonals = false )
+    val A = RoundedPoint( 0.0f, 0.0f )
+    val B = RoundedPoint( 1.0f, 1.0f )
+    val C = RoundedPoint( -1.0f, 1.0f )
+    converter1.link( Seq( A ), B ) should be ( converter1.link( Seq( B ), A ).reverse )
+    converter1.link( Seq( A ), C ) should be ( converter1.link( Seq( C ), A ).reverse )
   }
 }

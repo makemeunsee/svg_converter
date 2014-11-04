@@ -15,4 +15,6 @@ object RoundedPoint {
 }
 
 // case class for built in convenience methods. must provide already rounded x and y.
-private case class SecretRoundedPoint( x: Float, y: Float ) extends RoundedPoint
+private case class SecretRoundedPoint( x: Float, y: Float ) extends RoundedPoint {
+  override def toString = s"($x,$y)"
+}
