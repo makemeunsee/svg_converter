@@ -6,6 +6,8 @@ Turns paths to polylines in a svg document. Downsample / pixellize the lines in 
 Gallery
 =======
 
+![Sample](sample.png "Sample")
+
 [Before/after demo](http://www.jollycyb.org/svg/) (pre rendered)    
 
 [Original](www/BlankMap-Equirectangular.svg)
