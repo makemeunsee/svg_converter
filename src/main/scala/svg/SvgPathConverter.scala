@@ -23,7 +23,7 @@ object SvgPathConverter {
 
   def main(args: Array[String]) {
     val now = System.currentTimeMillis
-    scala.xml.XML.save("www/test_custom.svg", SvgPathConverter(gridSize, allowDiagonals, keepDots, lineWidth).update(world))
+    scala.xml.XML.save("www/out.svg", SvgPathConverter(gridSize, allowDiagonals, keepDots, lineWidth).update(world))
     println(System.currentTimeMillis - now)
   }
 }
