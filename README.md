@@ -8,10 +8,10 @@ Gallery
 
 [Before/after demo](http://www.jollycyb.org/svg/) (pre rendered)    
 
-![Original](www/BlankMap-Equirectangular.svg "Original")
+[Original](www/BlankMap-Equirectangular.svg)
 
-![Simplest](www/size_1%20dot_false%20diags_false.svg "Simplest")
+[Simplest](www/size_1%20dot_false%20diags_false.svg)
 
-![Keeping 'islands'](www/size_1%20dot_true%20diags_false.svg "Keeping 'islands'")
+[Keeping 'islands'](www/size_1%20dot_true%20diags_false.svg)
 
-![Allow diagonals](www/size_1%20dot_true%20diags_true.svg "Allow diagonals")
+[Allow diagonals](www/size_1%20dot_true%20diags_true.svg )
