@@ -15,11 +15,11 @@ object SvgPathConverter {
 
   val floatPattern = "-{0,1}[0-9]+(?:\\.*[0-9]*)"
   val floatRegExp = s"($floatPattern)".r
-  val pathPartPattern = s"([MmLlHhVvCcSsQqTt])(?:[\\s,]*$floatPattern[\\s,]*)+".r
+  val pathPartPattern = s"([AaMmLlHhVvCcSsQqTt])(?:[\\s,]*$floatPattern[\\s,]*)+".r
 
   val world =
-//    scala.xml.XML.loadFile( "www/BlankMap-Equirectangular.svg" )
-  scala.xml.XML.loadFile( "www/BlankMap-World-alt.svg" )
+//    scala.xml.XML.loadFile( "www/BlankMap-Equirectangular.svg" ) // recommended settings: gridSize ~ 1, lineWidth 0.1
+  scala.xml.XML.loadFile( "www/BlankMap-World-alt.svg" ) // recommended settings: gridSize ~ 5, lineWidth 0.5
 //  scala.xml.XML.loadFile( "www/test.svg" )
 
   def main( args: Array[String] ) {
@@ -50,7 +50,7 @@ object SvgPathConverter {
       evenListOfFloatsToRoundedPoints( floats )
 
     case "m" | "l" | "t" =>
-      if ( floats.size % 2 != 0 ) throw new Error( s"Expected even number of floats after M command, was: $floats" )
+      if ( floats.size % 2 != 0 ) throw new Error( s"Expected even number of floats after m command, was: $floats" )
       relativeToAbsolute( evenListOfFloatsToRoundedPoints( floats ),
                           position )
 
@@ -78,20 +78,31 @@ object SvgPathConverter {
       evenListOfFloatsToRoundedPoints( everyThirdAndFourthPaired.flatten.toSeq )
 
     case "s" | "q" =>
-      if ( floats.size % 4 != 0 ) throw new Error( s"Expected groups of 4 floats after S/Q command, was: $floats" )
+      if ( floats.size % 4 != 0 ) throw new Error( s"Expected groups of 4 floats after s/q command, was: $floats" )
       val everyThirdAndFourthPaired = floats.grouped( 4 ).map ( groupOf4 => Seq( groupOf4( 2 ), groupOf4( 3 ) ) )
       relativeToAbsolute( evenListOfFloatsToRoundedPoints( everyThirdAndFourthPaired.flatten.toSeq ),
                           position )
 
     case "C" =>
-      if ( floats.size % 6 != 0 ) throw new Error( s"Expected egroups of 6 floats after S/Q command, was: $floats" )
+      if ( floats.size % 6 != 0 ) throw new Error( s"Expected egroups of 6 floats after C command, was: $floats" )
       val everyFifthAndSixthPaired = floats.grouped( 6 ).map ( groupOf6 => Seq( groupOf6( 4 ), groupOf6( 5 ) ) )
       evenListOfFloatsToRoundedPoints( everyFifthAndSixthPaired.flatten.toSeq )
 
     case "c" =>
-      if ( floats.size % 6 != 0 ) throw new Error( s"Expected groups of 6 floats after S/Q command, was: $floats" )
+      if ( floats.size % 6 != 0 ) throw new Error( s"Expected groups of 6 floats after c command, was: $floats" )
       val everyFifthAndSixthPaired = floats.grouped( 6 ).map ( groupOf6 => Seq( groupOf6( 4 ), groupOf6( 5 ) ) )
       relativeToAbsolute( evenListOfFloatsToRoundedPoints( everyFifthAndSixthPaired.flatten.toSeq ),
+                          position )
+
+    case "A" =>
+      if ( floats.size % 7 != 0 ) throw new Error( s"Expected egroups of 7 floats after A command, was: $floats" )
+      val everySixthAndSeventhPaired = floats.grouped( 7 ).map ( groupOf7 => Seq( groupOf7( 5 ), groupOf7( 6 ) ) )
+      evenListOfFloatsToRoundedPoints( everySixthAndSeventhPaired.flatten.toSeq )
+
+    case "a" =>
+      if ( floats.size % 7 != 0 ) throw new Error( s"Expected groups of 7 floats after a command, was: $floats" )
+      val everySixthAndSeventhPaired = floats.grouped( 7 ).map ( groupOf7 => Seq( groupOf7( 5 ), groupOf7( 6 ) ) )
+      relativeToAbsolute( evenListOfFloatsToRoundedPoints( everySixthAndSeventhPaired.flatten.toSeq ),
                           position )
   }
 
@@ -107,6 +118,7 @@ object SvgPathConverter {
       } catch {
         case e: Error =>
           e.printStackTrace()
+          println( s"Faulty command: ${m.group( 0 )}" )
           seq
       }
     }
