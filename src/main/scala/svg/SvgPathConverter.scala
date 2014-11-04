@@ -8,23 +8,24 @@ import scala.xml.{Elem, Node}
  */
 object SvgPathConverter {
 
-  val gridSize = 1.0f
-  val lineWidth = 0.1f
-  val allowDiagonals = false
-  val keepDots = true
-
   val floatPattern = "-{0,1}[0-9]+(?:\\.[0-9]*)*(?:e-{0,1}[0-9]+)*"
   val floatRegExp = s"($floatPattern)".r
   val pathPartPattern = s"([AaMmLlHhVvCcSsQqTt])(?:[\\s,]*$floatPattern[\\s,]*)+".r
 
-  val world =
-    scala.xml.XML.loadFile("www/BlankMap-Equirectangular.svg") // recommended settings: gridSize ~ 1, lineWidth 0.1
-//    scala.xml.XML.loadFile( "www/BlankMap-World-alt.svg" ) // recommended settings: gridSize ~ 5, lineWidth 0.5
+  val file =
+    "www/BlankMap-Equirectangular.svg" // recommended settings: gridSize ~ 1, lineWidth 0.1
+//  "www/BlankMap-World-alt.svg" // recommended settings: gridSize ~ 5, lineWidth 0.5
 
   def main(args: Array[String]) {
+    val argSeq = args.toSeq.lift
+    val svg = scala.xml.XML.loadFile( argSeq( 0 ).getOrElse( file ) )
+    val gridSize = argSeq( 1 ).map( _.toFloat ).getOrElse( 1f )
+    val keepDots = argSeq( 2 ).map( _.toBoolean ).getOrElse( true )
+    val allowDiagonals = argSeq( 3 ).map( _.toBoolean ).getOrElse( false )
+    val lineWidth = argSeq( 4 ).map( _.toFloat ).getOrElse( 0.1f )
     val now = System.currentTimeMillis
-    scala.xml.XML.save("www/out.svg", SvgPathConverter(gridSize, allowDiagonals, keepDots, lineWidth).update(world))
-    println(System.currentTimeMillis - now)
+    scala.xml.XML.save("www/out.svg", SvgPathConverter( gridSize, allowDiagonals, keepDots, lineWidth ).update( svg ) )
+    println( System.currentTimeMillis - now )
   }
 }
 
