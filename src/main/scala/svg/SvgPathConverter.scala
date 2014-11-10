@@ -12,64 +12,102 @@ object SvgPathConverter {
   val floatRegExp = s"($floatPattern)".r
   val pathPartPattern = s"([AaMmLlHhVvCcSsQqTt])(?:[\\s,]*$floatPattern[\\s,]*)+".r
 
+  val colorStep = 0x8
+
   val file =
     "www/BlankMap-Equirectangular.svg" // recommended settings: gridSize ~ 1, lineWidth 0.1
 //  "www/BlankMap-World-alt.svg" // recommended settings: gridSize ~ 5, lineWidth 0.5
 
   def main(args: Array[String]) {
     val argSeq = args.toSeq.lift
-    val svg = scala.xml.XML.loadFile( argSeq( 0 ).getOrElse( file ) )
+
     val gridSize = argSeq( 1 ).map( _.toFloat ).getOrElse( 1f )
-    val keepDots = argSeq( 2 ).map( _.toBoolean ).getOrElse( true )
+    val keepDots = argSeq( 2 ).map( _.toBoolean ).getOrElse( false )
     val allowDiagonals = argSeq( 3 ).map( _.toBoolean ).getOrElse( false )
     val lineWidth = argSeq( 4 ).map( _.toFloat ).getOrElse( 0.1f )
+    val baseColor = argSeq( 5 ).map { s =>
+      try {
+        Integer.parseInt( s, 16 )
+      } catch {
+        case e: NumberFormatException =>
+          s.toInt
+      }
+    }
+
+    val svg = scala.xml.XML.loadFile( argSeq( 0 ).getOrElse( file ) )
+
     val now = System.currentTimeMillis
-    scala.xml.XML.save("www/out.svg", SvgPathConverter( gridSize, allowDiagonals, keepDots, lineWidth ).update( svg ) )
+
+    val converter = SvgPathConverter( gridSize, allowDiagonals, keepDots, lineWidth, baseColor )
+    scala.xml.XML.save("www/out.svg", converter.update( svg ) )
     println( System.currentTimeMillis - now )
   }
 }
 
-import SvgPathConverter.{pathPartPattern, floatRegExp}
+import SvgPathConverter.{pathPartPattern, floatRegExp, colorStep}
 
-case class SvgPathConverter( gridSize: Float = 1f, allowDiagonals: Boolean = false, keepDots: Boolean = true, lineWidth: Float = 0.1f ) {
+case class SvgPathConverter( gridSize: Float = 1f,
+                             allowDiagonals: Boolean = false,
+                             keepDots: Boolean = true,
+                             lineWidth: Float = 0.1f,
+                             baseColor: Option[Int] = None ) {
 
-  def update: Node => Node = update( pathToLine )
+  val colors = baseColor match {
+    case Some( c ) =>
+      val baseR = c / 256 / 256
+      val baseG = c % ( 256 * 256 ) / 256
+      val baseB = c % 256
+      Stream.from( 0 )
+        .map( i => ( baseR - i * colorStep, baseG - i * colorStep, baseB - i * colorStep ) )
+        .takeWhile { case (r, g, b) => r >= 0 && g >= 0 && b >= 0 }
+        .map { case (r, g, b) => s"#${( r * 256 * 256 + g * 256 + b ).toHexString}" } ++
+      Stream.from( 1 )
+        .map( i => ( baseR + i * colorStep, baseG + i * colorStep, baseB + i * colorStep ) )
+        .takeWhile { case (r, g, b) => r < 256 && g < 256 && b < 256 }
+        .map { case (r, g, b) => s"#${( r * 256 * 256 + g * 256 + b ).toHexString}" }
+
+    case _ =>
+      Seq( "none" )
+  }
+
+  var pathCount = 0
+  def update: Node => Node = { pathCount = 0 ; update( pathToLine ) }
 
   def update( fct: PartialFunction[Node, Node] )( node : Node ) : Node = {
-    def updateElements( seq : Seq[Node] ) : Seq[Node] =
-      for( subNode <- seq ) yield update( fct )( subNode )
 
     def updateNode( n: Node ): Node = n match {
       case Elem( prefix, label, attribs, scope, children @ _* ) =>
-        new Elem( prefix, label, attribs, scope, true, updateElements(children) : _* )
+        new Elem( prefix, label, attribs, scope, true, children.map( update( fct ) ) : _* )
       case other => other  // preserve text
     }
 
-    fct.applyOrElse( node, updateNode )
+    // try to apply fct, or else keep node, recurse into subnodes
+    updateNode( fct.applyOrElse( node, identity[Node] ) )
   }
 
   def pathToLine: PartialFunction[Node, Node] = {
     case path @ <path></path> =>
+      pathCount += 1
       val lines = parsePath( ( path \ "@d" ).text )
       val attributes = path.attributes.remove( "d" ).remove( "style" )
       // preserve attributes as much as possible (single line => get all the attributes, otherwise the <g> gets them)
       if ( lines.size == 1 ) {
         val points = lines( 0 )
-        val r = createTag( points )
+        val r = createTag( path, points )
         <g>{new Elem( r.prefix, r.label, r.attributes.append( attributes ), r.scope, true )}</g>
       } else {
         val child = lines map { points =>
-          createTag( points )
+          createTag( path, points )
         }
         new Elem( path.prefix, "g", attributes, path.scope, true, child: _* )
       }
   }
 
-  def createTag( points: Seq[RoundedPoint] ): Node = {
+  def createTag( node: Node, points: Seq[RoundedPoint] ): Node = {
     if ( points.size == 1 )
-      <rect x={( points(0).x - gridSize / 4 ).toString} y={( points( 0 ).y - gridSize / 4 ).toString} width={( gridSize / 2 ).toString} height={( gridSize / 2 ).toString} style="fill:none;stroke:black;stroke-width:0.12"/>
+      <rect x={( points( 0 ).x - gridSize / 4 ).toString} y={( points( 0 ).y - gridSize / 4 ).toString} width={( gridSize / 2 ).toString} height={( gridSize / 2 ).toString} style={s"fill:${colors( pathCount % colors.size )};stroke:black;stroke-width:0.12"}/>
     else
-      <polyline points={points.map( p => s"${p.x},${p.y}" ).mkString( " " )} style={s"fill:none;stroke:black;stroke-width:${lineWidth}"}/>
+      <polyline points={points.map( p => s"${p.x},${p.y}" ).mkString( " " )} style={s"fill:${colors( pathCount % colors.size )};stroke:black;stroke-width:$lineWidth"}/>
   }
 
   def parsePath( path: String ): Seq[Seq[RoundedPoint]] = {
@@ -107,7 +145,7 @@ case class SvgPathConverter( gridSize: Float = 1f, allowDiagonals: Boolean = fal
       val command = m.group( 1 )
       val floats = floatRegExp.findAllIn( m.group( 0 ) ).toSeq
       try {
-        seq ++ commandToPoints(command, floats, position)
+        seq ++ commandToPoints( command, floats, position )
       } catch {
         case e: Error =>
           e.printStackTrace()
@@ -159,7 +197,7 @@ case class SvgPathConverter( gridSize: Float = 1f, allowDiagonals: Boolean = fal
         position )
 
     case "C" =>
-      if ( floats.size % 6 != 0 ) throw new Error( s"Expected egroups of 6 floats after C command, was: $floats" )
+      if ( floats.size % 6 != 0 ) throw new Error( s"Expected groups of 6 floats after C command, was: $floats" )
       val everyFifthAndSixthPaired = floats.grouped( 6 ).map ( groupOf6 => Seq( groupOf6( 4 ), groupOf6( 5 ) ) )
       evenListOfFloatsToRoundedPoints( everyFifthAndSixthPaired.flatten.toSeq )
 
@@ -170,7 +208,7 @@ case class SvgPathConverter( gridSize: Float = 1f, allowDiagonals: Boolean = fal
         position )
 
     case "A" =>
-      if ( floats.size % 7 != 0 ) throw new Error( s"Expected egroups of 7 floats after A command, was: $floats" )
+      if ( floats.size % 7 != 0 ) throw new Error( s"Expected groups of 7 floats after A command, was: $floats" )
       val everySixthAndSeventhPaired = floats.grouped( 7 ).map ( groupOf7 => Seq( groupOf7( 5 ), groupOf7( 6 ) ) )
       evenListOfFloatsToRoundedPoints( everySixthAndSeventhPaired.flatten.toSeq )
 
@@ -182,15 +220,15 @@ case class SvgPathConverter( gridSize: Float = 1f, allowDiagonals: Boolean = fal
   }
 
   def evenListOfFloatsToRoundedPoints( floats: Seq[String] ): Seq[RoundedPoint] = {
-    floats.grouped(2).map { case groupOf2 =>
-      RoundedPoint(groupOf2(0).toFloat, groupOf2(1).toFloat)
+    floats.grouped( 2 ).map { case groupOf2 =>
+      RoundedPoint( groupOf2( 0 ).toFloat, groupOf2( 1 ).toFloat )
     }.toSeq
   }
 
   def relativeToAbsolute( points: Seq[RoundedPoint],
                           from: RoundedPoint ): Seq[RoundedPoint] = {
     points.foldLeft( ( Seq.empty[RoundedPoint], from ) ) { case ( ( res, pos ), pt ) =>
-      val newPos = RoundedPoint(pt.x + pos.x, pt.y + pos.y)
+      val newPos = RoundedPoint( pt.x + pos.x, pt.y + pos.y )
       ( res :+ newPos, newPos )
     }._1
   }
@@ -223,20 +261,20 @@ case class SvgPathConverter( gridSize: Float = 1f, allowDiagonals: Boolean = fal
         val dist = ( p.x - to.x ) * ( p.x - to.x ) + ( p.y - to.y ) * ( p.y - to.y )
         if ( oldD < dist )
           ( oldClosest, oldD )
-        else if (oldD == dist) {
+        else if ( oldD == dist ) {
           // anisotropic selection, see tests
           if ( oldClosest.x < p.x ) {
             ( oldClosest, oldD )
           } else if ( oldClosest.x == p.x ) {
-            if (oldClosest.y < p.y) {
-              (oldClosest, oldD)
-            } else if (oldClosest.y == p.y) {
-              throw new Error("Identical points not expected here")
+            if ( oldClosest.y < p.y ) {
+              ( oldClosest, oldD )
+            } else if ( oldClosest.y == p.y ) {
+              throw new Error( "Identical points not expected here" )
             } else {
-              (p, dist)
+              ( p, dist )
             }
           } else {
-            (p, dist)
+            ( p, dist )
           }
         } else
           ( p, dist )
@@ -262,7 +300,7 @@ case class SvgPathConverter( gridSize: Float = 1f, allowDiagonals: Boolean = fal
         p :: h1 :: h2 :: tail
       case ( h1 :: h2 :: tail, p ) if p == h2 =>
         h2 :: tail
-      case ( l, p)  =>
+      case ( l, p )  =>
         p :: l
     }
     // find 0 area branch centered on head/last of the loop
