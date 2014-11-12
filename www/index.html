@@ -4,40 +4,61 @@
     <meta charset="utf-8">
     
     <title>SVG downsampling</title>
+
+    <style>
+div#preload { display: none; }
+input, label { cursor: pointer; }
+body { font-family: Montserrat;cursor: progress; }
+input { display: none; }
+label { display: inline-block; width: 20%; padding: 1em; margin: 4px 1%; color: #333; font-size: 0.8em; font-weight: bold; border: 1px solid #333; border-radius: 5px; opacity: 0.7; font-variant: small-caps; background: white; }
+label:hover { opacity: 1; }
+#buttons { text-align: center; margin: 20px auto; }
+input:checked+label { box-shadow: 0 0 4px 1px #0bc; opacity: 1; }
+#container { width: 100%; background: white; position: relative; margin: 0 auto; }
+#container div { width: 100%; }
+    </style>
     <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
     <script src="http://code.jquery.com/ui/1.11.0/jquery-ui.min.js"></script>
     <script src="js/jquery.beforeafter-1.4.min.js"></script>
     <script type="text/javascript">
 $(function(){
-	$('#container').beforeAfter();
+  $('#container').beforeAfter();
 });
 
 function selectTransform() {
-  for (var i = 1; i < 7; i++) {
+  for (var i = 1; i <= 4; i++) {
     if (document.getElementById('radio'+i).checked) {
       document.getElementById('afterTransformDiv').getElementsByTagName('img')[0].src = document.getElementById('radio'+i).value;
       break;
     }
   }
 };
-</script>
+
+$(window).load(function () {
+  $("body").css({"cursor": "auto"});
+});
+    </script>
   </head>
   <body>
+    <div id="preload">
+      <img src="BlankMap-Equirectangular.svg" />
+      <img src="size_1%20dot_false%20diags_false.svg" />
+      <img src="size_1%20dot_true%20diags_false.svg" />
+      <img src="size_1%20dot_true%20diags_true.svg" />
+      <img src="size_1%20dot_true%20diags_true%20colors.svg" />
+    </div>
     <div id="buttons">
-      Grid size / keep dot border / use diagonals
-      <input id="radio1" type="radio" name="radio" onClick="selectTransform()" value="size_0.5 dot_false diags_true.svg">0.5 / false / true
-      <input id="radio2" type="radio" name="radio" onClick="selectTransform()" value="size_1 dot_false diags_false.svg" checked>1 / false / false
-      <input id="radio3" type="radio" name="radio" onClick="selectTransform()" value="size_1 dot_true diags_false.svg">1 / true / false
-      <input id="radio4" type="radio" name="radio" onClick="selectTransform()" value="size_1 dot_true diags_true.svg">1 / true / true
-      <input id="radio5" type="radio" name="radio" onClick="selectTransform()" value="size_1.2 dot_false diags_true.svg">1.2 / false / true
-      <input id="radio6" type="radio" name="radio" onClick="selectTransform()" value="size_1.2 dot_true diags_true.svg">1.2 / true / true
+      <input id="radio1" type="radio" name="radio" onClick="selectTransform()" value="size_1%20dot_false%20diags_false.svg" checked><label for="radio1">Barest</label>
+      <input id="radio2" type="radio" name="radio" onClick="selectTransform()" value="size_1%20dot_true%20diags_false.svg"><label for="radio2">Keeping single point borders</label>
+      <input id="radio3" type="radio" name="radio" onClick="selectTransform()" value="size_1%20dot_true%20diags_true.svg"><label for="radio3">Allowing diagonals</label>
+      <input id="radio4" type="radio" name="radio" onClick="selectTransform()" value="size_1%20dot_true%20diags_true%20colors.svg"><label for="radio4">Colored</label>
     </div>
     <div id="container">
-      <div style="background-color:rgba(255, 255, 255, 255)">
-        <img alt="before" src="BlankMap-Equirectangular.svg" width="1800" height="900" />
+      <div id="beforeTransformDiv" style="background-color:rgba(255, 255, 255, 255)">
+        <img alt="before" title="before" src="BlankMap-Equirectangular.svg" width="1800" height="900"/>
       </div>
       <div id="afterTransformDiv">
-        <img alt="after" src="size_1 dot_false diags_false.svg" width="1800" height="900" />
+        <img alt="after" title="after" src="size_1 dot_false diags_false.svg" width="1800" height="900"/>
       </div>
    </div>
   </body>
